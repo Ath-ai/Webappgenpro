@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APK Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 10px;
+        }
+        input, button {
+            margin-top: 5px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        #result, #preview {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e9e9e9;
+            border-radius: 4px;
+        }
+        #logoPreview {
+            max-width: 100px;
+            max-height: 100px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>APK Generator</h1>
+        <form id="generator-form">
+            <label for="app-name">App Name:</label>
+            <input type="text" id="app-name" required>
+            
+            <label for="logo-file">Logo (PNG, JPG, or GIF):</label>
+            <input type="file" id="logo-file" accept="image/*" required>
+            
+            <div id="preview">
+                <h3>Preview:</h3>
+                <p>App Name: <span id="previewName"></span></p>
+                <img id="logoPreview" src="" alt="Logo preview">
+            </div>
+
+            <button type="submit">Generate APK</button>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const appNameInput = document.getElementById('app-name');
+        const logoFileInput = document.getElementById('logo-file');
+        const previewName = document.getElementById('previewName');
+        const logoPreview = document.getElementById('logoPreview');
+        const form = document.getElementById('generator-form');
+        const result = document.getElementById('result');
+
+        appNameInput.addEventListener('input', updatePreview);
+        logoFileInput.addEventListener('change', updateLogoPreview);
+
+        function updatePreview() {
+            previewName.textContent = appNameInput.value || 'Your App Name';
+        }
+
+        function updateLogoPreview() {
+            const file = logoFileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    logoPreview.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const appName = appNameInput.value;
+            const logoFile = logoFileInput.files[0];
+
+            if (!appName || !logoFile) {
+                result.innerHTML = '<p>Please fill in all fields.</p>';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('appName', appName);
+            formData.append('logo', logoFile);
+
+            result.innerHTML = '<p>Generating APK... Please wait.</p>';
+
+            try {
+                const response = await fetch('/generate-apk', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = downloadUrl;
+                    a.download = `${appName.replace(/\s+/g, '_')}.apk`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(downloadUrl);
+                    result.innerHTML = '<p>APK generated successfully! Downloading...</p>';
+                } else {
+                    result.innerHTML = '<p>Error generating APK. Please try again.</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                result.innerHTML = '<p>Error generating APK. Please try again.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
